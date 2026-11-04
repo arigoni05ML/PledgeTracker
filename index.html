@@ -330,7 +330,13 @@
 
   $("whatsapp").addEventListener("click", function(){
     rememberLeader();
-    window.location.href = "https://wa.me/?text=" + encodeURIComponent(currentMessage());
+    // wa.me / api.whatsapp.com redirects corrupt emojis, so go straight to the app on phones
+    var text = encodeURIComponent(currentMessage());
+    var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    window.location.href = isMobile
+      ? "whatsapp://send?text=" + text
+      : "https://web.whatsapp.com/send?text=" + text;
   });
 
   $("clear").addEventListener("click", function(){
