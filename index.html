@@ -373,6 +373,11 @@
   setTab(state.tab === "eod" ? "eod" : "pledge");
   update();
 })();
+
+// Register the offline cache (only works over https, e.g. GitHub Pages)
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+}
 </script>
 </body>
 </html>
