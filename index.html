@@ -92,7 +92,7 @@
     <div class="card">
       <h2>Today's pledges</h2>
       <div class="pledge-grid" id="pledge-fields"></div>
-      <p class="hint">Leave a box empty to leave that line out. New, Upgrades and HBB fill the EOD targets automatically.</p>
+      <p class="hint">Leave a box empty to leave that line out. New, Upgrades and HBB fill the EOD targets automatically. Pledges and EOD actuals reset automatically at midnight.</p>
     </div>
     <div class="card">
       <h2>Preview</h2>
@@ -151,11 +151,31 @@
 
   // ---------- state ----------
   function freshState(){
-    var s = { tab:"pledge", store:"Belfast", leader:"", leaders:[], pledge:{}, eod:{} };
+    var s = { tab:"pledge", store:"Belfast", leader:"", leaders:[], pledge:{}, eod:{}, day:todayKey() };
     PLEDGES.forEach(function(p){ s.pledge[p.k] = ""; });
     METRICS.forEach(function(m){ s.eod[m.k] = { a:"", t:m.defT || "", o:"auto" }; });
     return s;
   }
+
+  // Local calendar date, e.g. "2026-11-06"
+  function todayKey(){
+    var d = new Date();
+    return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+  }
+
+  // Start a new day: wipe leader, pledges (and the EOD targets they fill) and all actuals.
+  // Store name, saved leaders and standing targets (e.g. Insurance 30%) are kept.
+  function resetDay(s){
+    s.leader = "";
+    PLEDGES.forEach(function(p){
+      s.pledge[p.k] = "";
+      if (p.eod) s.eod[p.eod].t = "";
+    });
+    METRICS.forEach(function(m){ s.eod[m.k].a = ""; s.eod[m.k].o = "auto"; });
+    s.tab = "pledge";
+    s.day = todayKey();
+  }
+
   function load(){
     var s = freshState();
     try {
@@ -169,6 +189,8 @@
           var d = saved.eod && saved.eod[m.k];
           if (d) s.eod[m.k] = { a:String(d.a || ""), t:String(d.t || ""), o:(d.o === "yes" || d.o === "no") ? d.o : "auto" };
         });
+        // Data saved before this feature has no day: adopt today rather than wiping it.
+        if (typeof saved.day === "string" && saved.day !== s.day) resetDay(s);
       }
     } catch(e) {}
     return s;
@@ -365,6 +387,22 @@
   $("leader").value = state.leader;
   $("leader").addEventListener("input", function(e){ state.leader = e.target.value; update(); });
   $("leader").addEventListener("change", rememberLeader);
+
+  // ---------- daily reset ----------
+  // The app may stay open overnight (PWA / background tab), so check again whenever it's shown.
+  function checkNewDay(){
+    if (state.day === todayKey()) return;
+    resetDay(state);
+    $("leader").value = "";
+    buildPledgeFields(); buildEodFields();
+    setTab("pledge");
+    update();
+    toast("New day – pledges and actuals reset");
+  }
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) checkNewDay(); });
+  window.addEventListener("focus", checkNewDay);
+  window.addEventListener("pageshow", checkNewDay);
+  setInterval(checkNewDay, 60 * 1000);
 
   // ---------- init ----------
   renderLeaders();
