@@ -12,36 +12,82 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pledge">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>
+  // Apply the saved theme before first paint so there's no flash
+  (function(){
+    try {
+      var s = JSON.parse(localStorage.getItem("pledgeEod.v1") || "{}");
+      var t = s.config && s.config.theme;
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch(e) {}
+  })();
+</script>
 <style>
   :root{
-    --bg:#f4f4f5; --card:#ffffff; --text:#18181b; --muted:#71717a; --border:#e4e4e7;
-    --input:#fafafa; --accent:#e60000; --good:#16a34a; --bad:#dc2626; --preview:#e7f8ec;
+    --bg:#f2f2f7; --card:#ffffff; --text:#1c1c1e; --muted:#6e6e73; --border:#e3e3e8;
+    --input:#f7f7f9; --field:#f2f2f7; --track:#e9e9ea; --accent:#e60000; --good:#16a34a; --bad:#dc2626;
+    --preview:#e7f8ec; --sheet:#f2f2f7; --group:#ffffff; --on:#34c759;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.05);
+    --spring:cubic-bezier(.32,.72,0,1); --bounce:cubic-bezier(.34,1.56,.64,1);
+    color-scheme:light;
   }
   @media (prefers-color-scheme: dark){
-    :root{
-      --bg:#0f0f10; --card:#1a1a1c; --text:#f4f4f5; --muted:#a1a1aa; --border:#2e2e32;
-      --input:#232326; --preview:#12261a;
+    :root:not([data-theme="light"]){
+      --bg:#0f0f10; --card:#1c1c1e; --text:#f4f4f5; --muted:#a1a1aa; --border:#2e2e32;
+      --input:#2c2c2e; --field:#3a3a3c; --track:#39393d; --preview:#12261a; --sheet:#1c1c1e; --group:#2c2c2e;
+      --shadow:none; color-scheme:dark;
     }
   }
-  *{box-sizing:border-box}
+  :root[data-theme="dark"]{
+    --bg:#0f0f10; --card:#1c1c1e; --text:#f4f4f5; --muted:#a1a1aa; --border:#2e2e32;
+    --input:#2c2c2e; --field:#3a3a3c; --track:#39393d; --preview:#12261a; --sheet:#1c1c1e; --group:#2c2c2e;
+    --shadow:none; color-scheme:dark;
+  }
+  html.theming *, html.theming *::before, html.theming *::after{
+    transition:background-color .45s var(--spring), color .45s var(--spring), border-color .45s var(--spring) !important;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0}
-  body{background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
-  header{position:sticky;top:0;z-index:5;background:var(--accent);color:#fff;padding:max(12px,env(safe-area-inset-top)) 16px 0}
-  .head-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;max-width:560px;margin-inline:auto}
-  h1{margin:0;font-size:18px;font-weight:700}
-  .store{display:flex;align-items:center;gap:6px;font-size:13px}
-  .store input{width:110px;padding:6px 8px;font-size:14px;border-radius:8px;border:0;background:rgba(255,255,255,.2);color:#fff}
-  .store input::placeholder{color:rgba(255,255,255,.7)}
-  .tabs{display:flex;gap:4px;max-width:560px;margin:0 auto}
-  .tab{flex:1;border:0;background:rgba(255,255,255,.18);color:#fff;font-family:inherit;font-size:15px;font-weight:600;padding:11px;border-radius:12px 12px 0 0;cursor:pointer}
-  .tab[aria-selected="true"]{background:var(--bg);color:var(--text)}
+  body{background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
+  body.locked{overflow:hidden}
+  button{font-family:inherit;color:inherit}
+
+  /* ---------- header ---------- */
+  header{position:sticky;top:0;z-index:5;background:var(--accent);color:#fff;padding:max(12px,env(safe-area-inset-top)) 16px 12px}
+  .head-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 auto 12px;max-width:560px}
+  h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .sub{font-size:13px;opacity:.85;margin-top:1px}
+  .icon-btn{width:40px;height:40px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;display:grid;place-items:center;cursor:pointer;transition:transform .35s var(--spring),background .2s}
+  .icon-btn:active{transform:scale(.86) rotate(-30deg);background:rgba(255,255,255,.3)}
+  .icon-btn svg{width:22px;height:22px}
+
+  /* segmented control (header tabs + theme picker) */
+  .seg{--n:2;--i:0;position:relative;display:grid;grid-template-columns:repeat(var(--n),1fr);background:rgba(0,0,0,.2);border-radius:11px;padding:3px}
+  .seg button{position:relative;z-index:1;border:0;background:none;color:#fff;font-size:15px;font-weight:600;padding:9px 6px;cursor:pointer;transition:color .35s var(--spring),transform .2s var(--spring)}
+  .seg button:active{transform:scale(.95)}
+  .seg button[aria-selected="true"]{color:var(--text)}
+  .seg .thumb{position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px) / var(--n));border-radius:8px;background:var(--card);box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04);transform:translateX(calc(var(--i) * 100%));transition:transform .45s var(--spring)}
+  #tabs{max-width:560px;margin:0 auto}
+  .seg.soft{background:var(--track)}
+  .seg.soft button{color:var(--text);font-size:14px;padding:8px 6px}
+  .seg.soft .thumb{background:var(--group)}
+  :root[data-theme="dark"] .seg.soft .thumb{background:#636366}
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .seg.soft .thumb{background:#636366} }
+
+  /* ---------- main ---------- */
   main{max-width:560px;margin:0 auto;padding:16px 16px calc(110px + env(safe-area-inset-bottom))}
   .panel[hidden]{display:none}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px}
-  .card h2{margin:0 0 10px;font-size:14px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .panel.in-r{animation:inR .5s var(--spring)}
+  .panel.in-l{animation:inL .5s var(--spring)}
+  @keyframes inR{from{opacity:0;transform:translateX(32px)}to{opacity:1;transform:none}}
+  @keyframes inL{from{opacity:0;transform:translateX(-32px)}to{opacity:1;transform:none}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .card h2{margin:0 0 10px;font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
   label.field{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
-  input{width:100%;font-family:inherit;font-size:17px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--input);color:var(--text)}
-  input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  input,textarea,select{font-family:inherit;color:var(--text)}
+  input{width:100%;font-size:17px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--input);transition:border-color .2s,box-shadow .25s var(--spring)}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(230,0,0,.16)}
   .pledge-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .metric{display:grid;grid-template-columns:1fr auto 1fr 52px;align-items:end;gap:8px;padding:10px 0;border-top:1px solid var(--border)}
   .metric:first-of-type{border-top:0;padding-top:0}
@@ -53,35 +99,159 @@
   .affix .suf{right:11px}
   .affix input.has-pre{padding-left:24px}
   .affix input.has-suf{padding-right:26px}
-  .tick{height:46px;border-radius:10px;border:2px solid var(--border);background:var(--input);font-size:20px;cursor:pointer;position:relative;padding:0}
+  .tick{height:46px;border-radius:10px;border:2px solid var(--border);background:var(--input);font-size:20px;cursor:pointer;position:relative;padding:0;transition:transform .2s var(--spring)}
+  .tick:active{transform:scale(.9)}
   .tick.auto{border-style:dashed}
+  .tick.pop{animation:pop .5s var(--bounce)}
+  @keyframes pop{0%{transform:scale(.7)}100%{transform:scale(1)}}
   .tick small{position:absolute;bottom:-17px;left:0;right:0;font-size:10px;color:var(--muted)}
   .hint{font-size:12px;color:var(--muted);margin:10px 0 0}
-  pre.preview{margin:0;white-space:pre-wrap;word-break:break-word;background:var(--preview);border-radius:10px;padding:12px;font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .empty{color:var(--muted);font-size:14px;margin:0}
+  pre.preview{margin:0;white-space:pre-wrap;word-break:break-word;background:var(--preview);border-radius:12px;padding:12px;font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+
+  /* reminder banner */
+  .bwrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s var(--spring)}
+  .bwrap.in{grid-template-rows:1fr}
+  .bwrap.out{grid-template-rows:0fr}
+  .bin{min-height:0;overflow:hidden}
+  .banner{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px;margin-bottom:14px;box-shadow:var(--shadow);transition:opacity .35s var(--spring),transform .5s var(--spring);opacity:0;transform:translateY(-10px) scale(.97)}
+  .bwrap.in .banner{opacity:1;transform:none}
+  .bwrap.out .banner{opacity:0;transform:translateY(-10px) scale(.97)}
+  .bicon{width:38px;height:38px;flex:none;border-radius:10px;display:grid;place-items:center;font-size:20px;background:rgba(230,0,0,.1)}
+  .banner .txt{flex:1;min-width:0;font-size:13px;color:var(--muted)}
+  .banner .txt b{display:block;font-size:15px;color:var(--text)}
+  .banner .go{border:0;border-radius:999px;background:var(--accent);color:#fff;font-weight:700;font-size:14px;padding:8px 14px;cursor:pointer;transition:transform .2s var(--spring)}
+  .banner .go:active{transform:scale(.93)}
+  .banner .x{border:0;background:var(--field);border-radius:50%;width:28px;height:28px;flex:none;font-size:16px;line-height:1;color:var(--muted);cursor:pointer}
+
+  /* bottom actions */
   .actions{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--border);padding:10px 16px max(10px,env(safe-area-inset-bottom));z-index:5}
   .actions-inner{max-width:560px;margin:0 auto;display:grid;grid-template-columns:2fr 2fr 1fr;gap:8px}
-  .btn{border:0;border-radius:12px;padding:14px 10px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+  .btn{border:0;border-radius:14px;padding:14px 10px;font-size:16px;font-weight:700;cursor:pointer;transition:transform .25s var(--spring),filter .2s}
+  .btn:active{transform:scale(.95);filter:brightness(.92)}
   .btn.primary{background:var(--accent);color:#fff}
   .btn.wa{background:#25d366;color:#06311a}
   .btn.ghost{background:var(--input);color:var(--text);border:1px solid var(--border)}
-  .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:10}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(16px) scale(.9);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .25s var(--spring),transform .5s var(--bounce);pointer-events:none;z-index:40;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+
+  /* ---------- settings sheet ---------- */
+  .overlay{position:fixed;inset:0;z-index:30;pointer-events:none}
+  .overlay.open{pointer-events:auto}
+  .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.42);opacity:0;transition:opacity .5s var(--spring)}
+  .overlay.open .backdrop{opacity:1}
+  .sheet{position:absolute;left:0;right:0;bottom:0;top:max(28px,calc(env(safe-area-inset-top) + 12px));margin:0 auto;max-width:600px;background:var(--sheet);border-radius:16px 16px 0 0;display:flex;flex-direction:column;transform:translateY(105%);transition:transform .55s var(--spring);box-shadow:0 -12px 40px rgba(0,0,0,.22)}
+  .overlay.open .sheet{transform:none}
+  .sheet-head{flex:none;padding:8px 16px 6px;touch-action:none;cursor:grab}
+  .grabber{width:38px;height:5px;border-radius:3px;background:var(--muted);opacity:.4;margin:0 auto 8px}
+  .sheet-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+  .sheet-bar h2{margin:0;font-size:17px;font-weight:700}
+  .done{justify-self:end;border:0;background:none;color:var(--accent);font-size:17px;font-weight:700;padding:6px 0;cursor:pointer;transition:opacity .2s}
+  .done:active{opacity:.5}
+  .sheet-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 16px calc(28px + env(safe-area-inset-bottom))}
+  .sect{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:24px 14px 7px}
+  .group{background:var(--group);border-radius:12px;overflow:hidden}
+  .group.pad{padding:12px 14px}
+  .group + .group{margin-top:10px}
+  .foot{font-size:12.5px;color:var(--muted);margin:7px 14px 0;line-height:1.45}
+  .row{display:flex;align-items:center;gap:10px;padding:8px 14px;min-height:48px;position:relative;width:100%;border:0;background:none;text-align:left;font-size:16px}
+  .row + .row::before,.item + .item::before{content:"";position:absolute;top:0;left:14px;right:0;border-top:1px solid var(--border)}
+  .rl{flex:1}
+  .row.link{color:var(--accent);font-weight:600;cursor:pointer;transition:background .2s}
+  .row.link:active{background:var(--field)}
+  .row.danger-t{color:var(--bad);justify-content:center}
+  .group input,.group textarea,.group select{background:var(--field);border:0;font-size:16px;padding:8px 10px;border-radius:8px}
+  .group input.inline{flex:1;width:auto;min-width:0;text-align:right;background:none;padding:6px 0;box-shadow:none}
+  select{-webkit-appearance:none;appearance:none;padding-right:28px !important;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238e8e93' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") !important;background-repeat:no-repeat !important;background-position:right 10px center !important}
+  textarea{width:100%;resize:vertical;line-height:1.45;font-size:15px !important;min-height:120px}
+
+  /* switch */
+  .switch{position:relative;width:51px;height:31px;flex:none;display:inline-block}
+  .switch input{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;opacity:0;cursor:pointer;z-index:1}
+  .switch span{position:absolute;inset:0;border-radius:999px;background:var(--track);transition:background .35s var(--spring)}
+  .switch span::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:999px;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);transition:transform .4s var(--spring),width .25s var(--spring)}
+  .switch input:checked + span{background:var(--on)}
+  .switch input:checked + span::after{transform:translateX(20px)}
+  .switch input:active + span::after{width:32px}
+  .switch input:checked:active + span::after{transform:translateX(15px)}
+  .switch.sm{width:42px;height:26px}
+  .switch.sm span::after{width:22px;height:22px}
+  .switch.sm input:checked + span::after{transform:translateX(16px)}
+  .switch.sm input:active + span::after{width:26px}
+  .switch.sm input:checked:active + span::after{transform:translateX(12px)}
+
+  /* opening hours */
+  .hrow{display:grid;grid-template-columns:34px 1fr 8px 1fr auto;align-items:center;gap:5px;padding:7px 12px 7px 14px;position:relative}
+  .hrow + .hrow::before{content:"";position:absolute;top:0;left:14px;right:0;border-top:1px solid var(--border)}
+  .hrow .d{font-weight:600;font-size:15px}
+  .hrow .dash{color:var(--muted);text-align:center}
+  .group select.time{min-width:0;width:100%;min-height:38px;padding:6px 20px 6px 8px !important;background-position:right 7px center !important;text-align:center;text-align-last:center;transition:opacity .3s var(--spring)}
+  .hrow.closed select.time{opacity:.3}
+
+  /* editable lines */
+  .item{position:relative}
+  .ihead{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 14px;min-height:52px}
+  .itoggle{flex:1;min-width:0;display:flex;align-items:center;gap:8px;border:0;background:none;text-align:left;padding:4px 0;cursor:pointer;font-size:16px}
+  .itoggle .emo{font-size:20px;width:26px;text-align:center;flex:none}
+  .itoggle .lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:opacity .3s}
+  .itoggle .meta{color:var(--muted);font-size:13px;white-space:nowrap;margin-left:auto}
+  .itoggle .chev{flex:none;color:var(--muted);transition:transform .45s var(--spring)}
+  .item.open .chev{transform:rotate(90deg)}
+  .item.off .lbl,.item.off .emo{opacity:.4}
+  .mini{width:32px;height:32px;flex:none;border:0;border-radius:8px;background:var(--field);color:var(--text);display:grid;place-items:center;cursor:pointer;transition:transform .2s var(--spring),opacity .2s}
+  .mini:active{transform:scale(.85)}
+  .mini:disabled{opacity:.3;cursor:default}
+  .mini svg{width:14px;height:14px}
+  .editor{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s var(--spring)}
+  .item.open .editor{grid-template-rows:1fr}
+  .ed-in{min-height:0;overflow:hidden}
+  .ed-pad{padding:2px 14px 14px;opacity:0;transform:translateY(-6px);transition:opacity .35s var(--spring),transform .5s var(--spring)}
+  .item.open .ed-pad{opacity:1;transform:none}
+  .ed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .ed-grid label{display:block;min-width:0}
+  .ed-grid label.w2{grid-column:span 2}
+  .ed-grid label.w3{grid-column:1/-1}
+  .ed-grid label > span{display:block;font-size:12px;color:var(--muted);margin:0 0 3px 2px}
+  .ed-grid select{width:100%}
+  .del{margin-top:10px;border:0;background:none;color:var(--bad);font-weight:600;font-size:15px;padding:6px 2px;cursor:pointer}
+  .addbtn{display:block;width:100%;margin-top:10px;border:0;border-radius:12px;background:var(--group);color:var(--accent);font-weight:600;font-size:16px;padding:13px;cursor:pointer;transition:transform .25s var(--spring)}
+  .addbtn:active{transform:scale(.97)}
+
+  /* templates */
+  .tpl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .tpl-head label{font-weight:600;font-size:15px}
+  .tlink{border:0;background:none;color:var(--accent);font-size:14px;font-weight:600;cursor:pointer;padding:4px 0}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{border:0;border-radius:999px;background:var(--field);color:var(--text);font-size:13px;padding:6px 10px;cursor:pointer;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;transition:transform .2s var(--spring),background .2s}
+  .chip:active{transform:scale(.9);background:rgba(230,0,0,.15)}
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  }
 </style>
 </head>
 <body>
 
 <header>
   <div class="head-row">
-    <h1>Pledge &amp; EOD</h1>
-    <label class="store">Store <input id="store" placeholder="Belfast" autocomplete="off"></label>
+    <div>
+      <h1>Pledge &amp; EOD</h1>
+      <div class="sub" id="head-sub"></div>
+    </div>
+    <button class="icon-btn" id="open-settings" type="button" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.830 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
   </div>
-  <div class="tabs" role="tablist">
-    <button class="tab" role="tab" id="tab-pledge" data-tab="pledge">☀️ Pledge</button>
-    <button class="tab" role="tab" id="tab-eod" data-tab="eod">🌙 EOD</button>
+  <div class="seg" id="tabs" role="tablist">
+    <span class="thumb"></span>
+    <button role="tab" id="tab-pledge" data-tab="pledge">☀️ Pledge</button>
+    <button role="tab" id="tab-eod" data-tab="eod">🌙 EOD</button>
   </div>
 </header>
 
 <main>
+  <div id="banner-slot"></div>
+
   <!-- PLEDGE -->
   <section class="panel" id="panel-pledge">
     <div class="card">
@@ -92,7 +262,7 @@
     <div class="card">
       <h2>Today's pledges</h2>
       <div class="pledge-grid" id="pledge-fields"></div>
-      <p class="hint">Leave a box empty to leave that line out. New, Upgrades and HBB fill the EOD targets automatically. Pledges and EOD actuals reset automatically at midnight.</p>
+      <p class="hint">Leave a box empty to leave that line out. Linked pledges fill the EOD targets automatically. Pledges and EOD actuals reset at midnight.</p>
     </div>
     <div class="card">
       <h2>Preview</h2>
@@ -121,61 +291,209 @@
     <button class="btn ghost" id="clear">Clear</button>
   </div>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- SETTINGS -->
+<div class="overlay" id="settings" aria-hidden="true" inert>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="set-title">
+    <div class="sheet-head" id="sheet-head">
+      <div class="grabber"></div>
+      <div class="sheet-bar"><span></span><h2 id="set-title">Settings</h2><button class="done" id="set-done" type="button">Done</button></div>
+    </div>
+    <div class="sheet-body" id="sheet-body">
+
+      <div class="sect">Appearance</div>
+      <div class="group pad">
+        <div class="seg soft" id="theme-seg" style="--n:3">
+          <span class="thumb"></span>
+          <button type="button" data-v="system">System</button>
+          <button type="button" data-v="light">Light</button>
+          <button type="button" data-v="dark">Dark</button>
+        </div>
+      </div>
+
+      <div class="sect">Store</div>
+      <div class="group">
+        <label class="row"><span class="rl">Store name</span><input class="inline" id="set-store" placeholder="Belfast" autocomplete="off"></label>
+      </div>
+
+      <div class="sect">Opening hours</div>
+      <div class="group" id="set-hours"></div>
+      <p class="foot">Switch a day off if the store is closed. Reminders follow these hours.</p>
+
+      <div class="sect">Reminders</div>
+      <div class="group">
+        <div class="row"><span class="rl">Notifications</span><label class="switch"><input type="checkbox" id="set-notify" aria-label="Notifications"><span></span></label></div>
+        <label class="row"><span class="rl">Pledge reminder</span>
+          <select id="set-pledge-after">
+            <option value="0">At opening</option>
+            <option value="15">15 min after opening</option>
+            <option value="30">30 min after opening</option>
+            <option value="60">1 hour after opening</option>
+          </select>
+        </label>
+        <label class="row"><span class="rl">EOD reminder</span>
+          <select id="set-eod-before">
+            <option value="0">At closing</option>
+            <option value="15">15 min before closing</option>
+            <option value="30">30 min before closing</option>
+            <option value="60">1 hour before closing</option>
+          </select>
+        </label>
+        <button class="row link" id="set-ics" type="button">Add reminders to Calendar</button>
+        <button class="row link" id="set-test" type="button">Send a test notification</button>
+      </div>
+      <p class="foot" id="set-next"></p>
+      <p class="foot">A banner shows in the app whenever the pledge or EOD is due and hasn't been sent yet. Notifications only arrive while the app is still running in the background. For reminders that always arrive, even with the app closed, tap <b>Add reminders to Calendar</b>. If you change the hours later, add them again.</p>
+
+      <div class="sect">Message templates</div>
+      <div class="group pad">
+        <div class="tpl-head"><label for="tpl-pledge">☀️ Pledge message</label><button class="tlink" type="button" data-reset="pledge">Reset</button></div>
+        <textarea id="tpl-pledge" rows="7" spellcheck="false"></textarea>
+        <div class="chips" data-for="tpl-pledge"></div>
+      </div>
+      <div class="group pad">
+        <div class="tpl-head"><label for="tpl-eod">🌙 EOD message</label><button class="tlink" type="button" data-reset="eod">Reset</button></div>
+        <textarea id="tpl-eod" rows="6" spellcheck="false"></textarea>
+        <div class="chips" data-for="tpl-eod"></div>
+      </div>
+      <p class="foot">Tap a tag to insert it. <code>{pledges}</code> and <code>{results}</code> become your lines. Any line with <code>{leader}</code> is left out when no leader is entered. Use *stars* for WhatsApp bold.</p>
+
+      <div class="sect">Pledge lines</div>
+      <div class="group" id="set-pledges"></div>
+      <button class="addbtn" id="add-pledge" type="button">+ Add pledge line</button>
+
+      <div class="sect">EOD lines</div>
+      <div class="group" id="set-metrics"></div>
+      <button class="addbtn" id="add-metric" type="button">+ Add EOD line</button>
+      <p class="foot">Use the arrows to reorder. Tap a line to edit it. Switch a line off to hide it without deleting it.</p>
+
+      <div class="group" style="margin-top:28px">
+        <button class="row link danger-t" id="set-restore" type="button">Restore default settings</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
   "use strict";
 
   var STORAGE_KEY = "pledgeEod.v1";
+  var REDUCED = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+  var EASE = "cubic-bezier(.32,.72,0,1)";
+  var DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var WEEK_ORDER = [1,2,3,4,5,6,0]; // Monday first
 
-  // EOD lines, in template order
-  var METRICS = [
-    { k:"revenue",    emoji:"💸",  label:"Revenue",        pre:"£" },
-    { k:"news",       emoji:"📱",  label:"News" },
-    { k:"upgrades",   emoji:"📲",  label:"Upgrades" },
-    { k:"hbb",        emoji:"🏡",  label:"HBB" },
-    { k:"insurance",  emoji:"⛑️",  label:"Insurance",      suf:"%", defT:"30" },
-    { k:"tradein",    emoji:"♻️",  label:"Trade-In" },
-    { k:"secondline", emoji:"👯‍♀️", label:"2nd Line",       suf:"%", defT:"15" },
-    { k:"business",   emoji:"💼",  label:"Business (15%)" }
+  // ---------- defaults ----------
+  var DEFAULT_METRICS = [
+    { id:"revenue",    emoji:"💸",  label:"Revenue",        pre:"£", suf:"",  defT:"" },
+    { id:"news",       emoji:"📱",  label:"News",           pre:"",  suf:"",  defT:"" },
+    { id:"upgrades",   emoji:"📲",  label:"Upgrades",       pre:"",  suf:"",  defT:"" },
+    { id:"hbb",        emoji:"🏡",  label:"HBB",            pre:"",  suf:"",  defT:"" },
+    { id:"insurance",  emoji:"⛑️",  label:"Insurance",      pre:"",  suf:"%", defT:"30" },
+    { id:"tradein",    emoji:"♻️",  label:"Trade-In",       pre:"",  suf:"",  defT:"" },
+    { id:"secondline", emoji:"👯‍♀️", label:"2nd Line",       pre:"",  suf:"%", defT:"15" },
+    { id:"business",   emoji:"💼",  label:"Business (15%)", pre:"",  suf:"",  defT:"" }
   ];
-
-  // Morning pledge lines; "eod" links a pledge to an EOD target
-  var PLEDGES = [
-    { k:"new",        emoji:"💸", label:"New",      eod:"news" },
-    { k:"upgrades",   emoji:"⬆️", label:"Upgrades", eod:"upgrades" },
-    { k:"hbb",        emoji:"🏠", label:"HBB",      eod:"hbb" },
-    { k:"secondline", emoji:"➕", label:"2nd Line" }
+  // "eod" links a pledge to the EOD line whose target it fills
+  var DEFAULT_PLEDGES = [
+    { id:"new",        emoji:"💸", label:"New",      eod:"news" },
+    { id:"upgrades",   emoji:"⬆️", label:"Upgrades", eod:"upgrades" },
+    { id:"hbb",        emoji:"🏠", label:"HBB",      eod:"hbb" },
+    { id:"secondline", emoji:"➕", label:"2nd Line", eod:"" }
   ];
+  // Index = JS weekday (0 = Sunday)
+  var DEFAULT_HOURS = [
+    { open:"13:00", close:"18:00", on:true }, // Sun
+    { open:"09:00", close:"18:00", on:true }, // Mon
+    { open:"09:00", close:"18:00", on:true }, // Tue
+    { open:"09:00", close:"19:00", on:true }, // Wed
+    { open:"09:00", close:"21:00", on:true }, // Thu
+    { open:"09:00", close:"21:00", on:true }, // Fri
+    { open:"09:00", close:"18:00", on:true }  // Sat
+  ];
+  var DEFAULT_TEMPLATES = {
+    pledge: "Morning all\n\n*{leader} is leading {store} Today*\n\n*Today’s Pledges:*\n\n{pledges}",
+    eod:    "Eod {store}:\n\n*Today's Result vs Pledge*\n\n{results}"
+  };
+  var TAGS = {
+    "tpl-pledge": ["{leader}","{store}","{day}","{date}","{pledges}"],
+    "tpl-eod":    ["{results}","{score}","{store}","{leader}","{day}","{date}"]
+  };
 
-  // ---------- state ----------
-  function freshState(){
-    var s = { tab:"pledge", store:"Belfast", leader:"", leaders:[], pledge:{}, eod:{}, day:todayKey() };
-    PLEDGES.forEach(function(p){ s.pledge[p.k] = ""; });
-    METRICS.forEach(function(m){ s.eod[m.k] = { a:"", t:m.defT || "", o:"auto" }; });
-    return s;
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  function withOn(list){ return list.map(function(x){ var y = clone(x); y.on = true; return y; }); }
+  function defaultConfig(){
+    return {
+      theme:"system",
+      metrics:withOn(DEFAULT_METRICS),
+      pledges:withOn(DEFAULT_PLEDGES),
+      hours:clone(DEFAULT_HOURS),
+      templates:clone(DEFAULT_TEMPLATES),
+      reminders:{ notify:false, pledgeAfter:0, eodBefore:15 }
+    };
+  }
+  function str(v, d){ return typeof v === "string" ? v : d; }
+  function validTime(t){ return typeof t === "string" && /^\d{2}:\d{2}$/.test(t); }
+  function sanitizeConfig(c){
+    var d = defaultConfig();
+    if (!c || typeof c !== "object") return d;
+    if (c.theme === "light" || c.theme === "dark" || c.theme === "system") d.theme = c.theme;
+    if (Array.isArray(c.metrics)) d.metrics = c.metrics.filter(function(m){ return m && typeof m.id === "string"; }).map(function(m){
+      return { id:m.id, emoji:str(m.emoji,""), label:str(m.label,""), pre:str(m.pre,""), suf:str(m.suf,""), defT:str(m.defT,""), on:m.on !== false };
+    });
+    if (Array.isArray(c.pledges)) d.pledges = c.pledges.filter(function(p){ return p && typeof p.id === "string"; }).map(function(p){
+      return { id:p.id, emoji:str(p.emoji,""), label:str(p.label,""), eod:str(p.eod,""), on:p.on !== false };
+    });
+    if (Array.isArray(c.hours) && c.hours.length === 7) d.hours = c.hours.map(function(h, i){
+      var dh = DEFAULT_HOURS[i]; h = h || {};
+      return { open:validTime(h.open) ? h.open : dh.open, close:validTime(h.close) ? h.close : dh.close, on:h.on !== false };
+    });
+    if (c.templates) {
+      if (typeof c.templates.pledge === "string") d.templates.pledge = c.templates.pledge;
+      if (typeof c.templates.eod === "string") d.templates.eod = c.templates.eod;
+    }
+    if (c.reminders) {
+      d.reminders.notify = !!c.reminders.notify;
+      if ([0,15,30,60].indexOf(+c.reminders.pledgeAfter) >= 0) d.reminders.pledgeAfter = +c.reminders.pledgeAfter;
+      if ([0,15,30,60].indexOf(+c.reminders.eodBefore) >= 0) d.reminders.eodBefore = +c.reminders.eodBefore;
+    }
+    return d;
   }
 
+  // ---------- state ----------
   // Local calendar date, e.g. "2026-11-06"
   function todayKey(){
     var d = new Date();
     return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+  }
+  function flags(){ return { pledge:false, eod:false }; }
+  function freshState(){
+    return { tab:"pledge", store:"Belfast", leader:"", leaders:[], pledge:{}, eod:{}, day:todayKey(),
+             sent:flags(), notified:flags(), dismissed:flags(), config:defaultConfig() };
+  }
+  function ensureEntries(s){
+    s.config.pledges.forEach(function(p){ if (s.pledge[p.id] == null) s.pledge[p.id] = ""; });
+    s.config.metrics.forEach(function(m){ if (!s.eod[m.id]) s.eod[m.id] = { a:"", t:m.defT || "", o:"auto" }; });
   }
 
   // Start a new day: wipe leader, pledges (and the EOD targets they fill) and all actuals.
   // Store name, saved leaders and standing targets (e.g. Insurance 30%) are kept.
   function resetDay(s){
     s.leader = "";
-    PLEDGES.forEach(function(p){
-      s.pledge[p.k] = "";
-      if (p.eod) s.eod[p.eod].t = "";
+    s.config.pledges.forEach(function(p){
+      s.pledge[p.id] = "";
+      if (p.eod && s.eod[p.eod]) s.eod[p.eod].t = "";
     });
-    METRICS.forEach(function(m){ s.eod[m.k].a = ""; s.eod[m.k].o = "auto"; });
+    Object.keys(s.eod).forEach(function(k){ s.eod[k].a = ""; s.eod[k].o = "auto"; });
+    s.sent = flags(); s.notified = flags(); s.dismissed = flags();
     s.tab = "pledge";
     s.day = todayKey();
   }
 
+  function readFlags(v){ var f = flags(); if (v) { f.pledge = !!v.pledge; f.eod = !!v.eod; } return f; }
   function load(){
     var s = freshState();
     try {
@@ -184,80 +502,113 @@
         var saved = JSON.parse(raw);
         ["tab","store","leader"].forEach(function(k){ if (typeof saved[k] === "string") s[k] = saved[k]; });
         if (Array.isArray(saved.leaders)) s.leaders = saved.leaders.slice(0, 20);
-        PLEDGES.forEach(function(p){ if (saved.pledge && saved.pledge[p.k] != null) s.pledge[p.k] = String(saved.pledge[p.k]); });
-        METRICS.forEach(function(m){
-          var d = saved.eod && saved.eod[m.k];
-          if (d) s.eod[m.k] = { a:String(d.a || ""), t:String(d.t || ""), o:(d.o === "yes" || d.o === "no") ? d.o : "auto" };
+        s.config = sanitizeConfig(saved.config);
+        if (saved.pledge) Object.keys(saved.pledge).forEach(function(k){ if (saved.pledge[k] != null) s.pledge[k] = String(saved.pledge[k]); });
+        if (saved.eod) Object.keys(saved.eod).forEach(function(k){
+          var d = saved.eod[k];
+          if (d) s.eod[k] = { a:String(d.a || ""), t:String(d.t || ""), o:(d.o === "yes" || d.o === "no") ? d.o : "auto" };
         });
-        // Data saved before this feature has no day: adopt today rather than wiping it.
+        s.sent = readFlags(saved.sent); s.notified = readFlags(saved.notified); s.dismissed = readFlags(saved.dismissed);
+        ensureEntries(s);
+        // Data saved before the daily reset existed has no day: adopt today rather than wiping it.
         if (typeof saved.day === "string" && saved.day !== s.day) resetDay(s);
       }
     } catch(e) {}
+    ensureEntries(s);
     return s;
   }
   var state = load();
   function save(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {} }
+  function cfg(){ return state.config; }
 
   // ---------- helpers ----------
   function $(id){ return document.getElementById(id); }
   function clean(v){ return String(v == null ? "" : v).trim(); }
-  function num(v){ var n = parseFloat(String(v).replace(/[£,%\s]/g, "")); return isNaN(n) ? 0 : n; }
+  function num(v){ var n = parseFloat(String(v).replace(/[£$€,%\s]/g, "")); return isNaN(n) ? 0 : n; }
+  function esc(v){ return String(v == null ? "" : v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
   function storeName(){ return clean(state.store) || "Belfast"; }
+  function uid(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function activeMetrics(){ return cfg().metrics.filter(function(m){ return m.on; }); }
+  function activePledges(){ return cfg().pledges.filter(function(p){ return p.on; }); }
+  function metricById(id){ for (var i = 0; i < cfg().metrics.length; i++) if (cfg().metrics[i].id === id) return cfg().metrics[i]; return null; }
+
+  function minutes(t){ var p = t.split(":"); return (+p[0]) * 60 + (+p[1]); }
+  function fmt(m){ m = ((m % 1440) + 1440) % 1440; return Math.floor(m / 60) + ":" + ("0" + (m % 60)).slice(-2); }
+  function nowMins(){ var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
 
   function isTicked(m){
-    var d = state.eod[m.k];
+    var d = state.eod[m.id];
     if (d.o === "yes") return true;
     if (d.o === "no") return false;
     return clean(d.t) !== "" ? num(d.a) >= num(d.t) : num(d.a) > 0;
   }
 
-  // ---------- message builders ----------
+  // Animate list children from their old position to their new one (FLIP)
+  function flip(container, mutate){
+    var before = {};
+    container.querySelectorAll("[data-id]").forEach(function(el){ before[el.getAttribute("data-id")] = el.getBoundingClientRect().top; });
+    mutate();
+    if (REDUCED || !Element.prototype.animate) return;
+    container.querySelectorAll("[data-id]").forEach(function(el){
+      var b = before[el.getAttribute("data-id")];
+      if (b == null) {
+        el.animate([{ opacity:0, transform:"scale(.97)" }, { opacity:1, transform:"none" }], { duration:380, easing:EASE });
+        return;
+      }
+      var dy = b - el.getBoundingClientRect().top;
+      if (dy) el.animate([{ transform:"translateY(" + dy + "px)" }, { transform:"none" }], { duration:480, easing:EASE });
+    });
+  }
+
+  // ---------- messages ----------
+  function fill(tpl, vars){
+    var out = tpl.split("\n").filter(function(line){ return !(line.indexOf("{leader}") >= 0 && !vars.leader); }).join("\n");
+    out = out.replace(/\{(\w+)\}/g, function(m, k){ return Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m; });
+    return out.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/^\s+|\s+$/g, "");
+  }
+  function baseVars(){
+    var d = new Date();
+    return { store:storeName(), leader:clean(state.leader), day:DAY_NAMES[d.getDay()], date:d.toLocaleDateString("en-GB") };
+  }
   function pledgeMessage(){
-    var lines = ["Morning all", ""];
-    var leader = clean(state.leader);
-    if (leader) lines.push("*" + leader + " is leading " + storeName() + " Today*", "");
-    lines.push("*Today\u2019s Pledges:*", "");
-    PLEDGES.forEach(function(p){
-      var v = clean(state.pledge[p.k]);
-      if (v !== "") lines.push("* " + p.emoji + " " + v + " " + p.label);
-    });
-    return lines.join("\n");
+    var v = baseVars();
+    v.pledges = activePledges().filter(function(p){ return clean(state.pledge[p.id]) !== ""; }).map(function(p){
+      return "* " + p.emoji + " " + clean(state.pledge[p.id]) + " " + p.label;
+    }).join("\n");
+    return fill(cfg().templates.pledge, v);
   }
-
   function eodMessage(){
-    var lines = ["Eod " + storeName() + ":", "", "*Today's Result vs Pledge*", ""];
-    METRICS.forEach(function(m){
-      var d = state.eod[m.k];
-      var a = clean(d.a) || "0";
-      var t = clean(d.t);
-      var value = (m.pre || "") + a + (t !== "" ? "/" + t + (m.suf || "") : "");
-      lines.push(m.emoji + " *" + m.label + ":* " + value + (isTicked(m) ? "✅" : "❌"));
-    });
-    return lines.join("\n");
+    var v = baseVars(), hit = 0, list = activeMetrics();
+    v.results = list.map(function(m){
+      var d = state.eod[m.id], a = clean(d.a) || "0", t = clean(d.t), ok = isTicked(m);
+      if (ok) hit++;
+      return m.emoji + " *" + m.label + ":* " + (m.pre || "") + a + (t !== "" ? "/" + t + (m.suf || "") : "") + (ok ? "✅" : "❌");
+    }).join("\n");
+    v.score = hit + "/" + list.length;
+    return fill(cfg().templates.eod, v);
   }
-
   function currentMessage(){ return state.tab === "eod" ? eodMessage() : pledgeMessage(); }
 
-  // ---------- rendering ----------
+  // ---------- main panels ----------
   function affixInput(id, value, pre, suf, placeholder){
     var cls = (pre ? "has-pre " : "") + (suf ? "has-suf" : "");
     return '<div class="affix">' +
-      (pre ? '<span class="pre">' + pre + '</span>' : '') +
-      '<input id="' + id + '" class="' + cls + '" inputmode="decimal" autocomplete="off" placeholder="' + placeholder + '" value="' + escAttr(value) + '">' +
-      (suf ? '<span class="suf">' + suf + '</span>' : '') +
+      (pre ? '<span class="pre">' + esc(pre) + '</span>' : '') +
+      '<input id="' + id + '" class="' + cls + '" inputmode="decimal" autocomplete="off" placeholder="' + placeholder + '" value="' + esc(value) + '">' +
+      (suf ? '<span class="suf">' + esc(suf) + '</span>' : '') +
       '</div>';
   }
-  function escAttr(v){ return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
 
   function buildPledgeFields(){
-    $("pledge-fields").innerHTML = PLEDGES.map(function(p){
-      return '<div><label class="field" for="p-' + p.k + '">' + p.emoji + ' ' + p.label + '</label>' +
-        affixInput("p-" + p.k, state.pledge[p.k], "", "", "–") + '</div>';
-    }).join("");
-    PLEDGES.forEach(function(p){
-      $("p-" + p.k).addEventListener("input", function(e){
-        state.pledge[p.k] = e.target.value;
-        if (p.eod) {
+    var list = activePledges();
+    $("pledge-fields").innerHTML = list.length ? list.map(function(p){
+      return '<div><label class="field" for="p-' + p.id + '">' + esc(p.emoji + " " + p.label) + '</label>' +
+        affixInput("p-" + p.id, state.pledge[p.id], "", "", "–") + '</div>';
+    }).join("") : '<p class="empty">No pledge lines. Add some in Settings.</p>';
+    list.forEach(function(p){
+      $("p-" + p.id).addEventListener("input", function(e){
+        state.pledge[p.id] = e.target.value;
+        if (p.eod && state.eod[p.eod]) {
           state.eod[p.eod].t = e.target.value;
           var tgt = $("t-" + p.eod); if (tgt) tgt.value = e.target.value;
         }
@@ -267,21 +618,22 @@
   }
 
   function buildEodFields(){
-    $("eod-fields").innerHTML = METRICS.map(function(m){
-      var d = state.eod[m.k];
+    var list = activeMetrics();
+    $("eod-fields").innerHTML = list.length ? list.map(function(m){
+      var d = state.eod[m.id];
       return '<div class="metric">' +
-        '<div class="name">' + m.emoji + ' ' + m.label + '</div>' +
-        '<div><label class="field" for="a-' + m.k + '">Actual</label>' + affixInput("a-" + m.k, d.a, m.pre, "", "0") + '</div>' +
+        '<div class="name">' + esc(m.emoji + " " + m.label) + '</div>' +
+        '<div><label class="field" for="a-' + m.id + '">Actual</label>' + affixInput("a-" + m.id, d.a, m.pre, "", "0") + '</div>' +
         '<div class="slash">/</div>' +
-        '<div><label class="field" for="t-' + m.k + '">Target</label>' + affixInput("t-" + m.k, d.t, "", m.suf, "none") + '</div>' +
-        '<button class="tick" id="k-' + m.k + '" type="button" aria-label="Toggle tick for ' + m.label + '"></button>' +
+        '<div><label class="field" for="t-' + m.id + '">Target</label>' + affixInput("t-" + m.id, d.t, "", m.suf, "none") + '</div>' +
+        '<button class="tick" id="k-' + m.id + '" type="button" aria-label="Toggle tick for ' + esc(m.label) + '"></button>' +
         '</div>';
-    }).join("");
-    METRICS.forEach(function(m){
-      $("a-" + m.k).addEventListener("input", function(e){ state.eod[m.k].a = e.target.value; update(); });
-      $("t-" + m.k).addEventListener("input", function(e){ state.eod[m.k].t = e.target.value; update(); });
-      $("k-" + m.k).addEventListener("click", function(){
-        var d = state.eod[m.k];
+    }).join("") : '<p class="empty">No EOD lines. Add some in Settings.</p>';
+    list.forEach(function(m){
+      $("a-" + m.id).addEventListener("input", function(e){ state.eod[m.id].a = e.target.value; update(); });
+      $("t-" + m.id).addEventListener("input", function(e){ state.eod[m.id].t = e.target.value; update(); });
+      $("k-" + m.id).addEventListener("click", function(){
+        var d = state.eod[m.id];
         // auto -> force the opposite of what auto gives -> back to auto
         if (d.o === "auto") d.o = isTicked(m) ? "no" : "yes";
         else d.o = "auto";
@@ -289,31 +641,50 @@
       });
     });
   }
+  function rebuildMain(){ buildPledgeFields(); buildEodFields(); update(); }
 
+  function headSub(){
+    var h = cfg().hours[new Date().getDay()];
+    return storeName() + " · " + (h.on ? "Open " + fmt(minutes(h.open)) + "–" + fmt(minutes(h.close)) + " today" : "Closed today");
+  }
+
+  var lastTick = {};
   function update(){
     $("pledge-preview").textContent = pledgeMessage();
     $("eod-preview").textContent = eodMessage();
-    METRICS.forEach(function(m){
-      var b = $("k-" + m.k); if (!b) return;
-      var d = state.eod[m.k];
+    activeMetrics().forEach(function(m){
+      var b = $("k-" + m.id); if (!b) return;
+      var d = state.eod[m.id], t = isTicked(m);
       b.className = "tick" + (d.o === "auto" ? " auto" : "");
-      b.innerHTML = (isTicked(m) ? "✅" : "❌") + "<small>" + (d.o === "auto" ? "auto" : "manual") + "</small>";
+      b.innerHTML = (t ? "✅" : "❌") + "<small>" + (d.o === "auto" ? "auto" : "manual") + "</small>";
+      if (lastTick[m.id] !== undefined && lastTick[m.id] !== t) { void b.offsetWidth; b.classList.add("pop"); }
+      lastTick[m.id] = t;
     });
+    $("head-sub").textContent = headSub();
     save();
   }
 
-  function setTab(tab){
+  function setTab(tab, animate){
+    var prev = state.tab;
     state.tab = tab;
+    $("tabs").style.setProperty("--i", tab === "eod" ? 1 : 0);
     ["pledge","eod"].forEach(function(t){
       $("tab-" + t).setAttribute("aria-selected", t === tab ? "true" : "false");
-      $("panel-" + t).hidden = t !== tab;
+      var p = $("panel-" + t);
+      p.hidden = t !== tab;
+      p.classList.remove("in-l", "in-r");
     });
+    if (animate && prev !== tab) {
+      var p = $("panel-" + tab); void p.offsetWidth;
+      p.classList.add(tab === "eod" ? "in-r" : "in-l");
+    }
     save();
+    renderBanner();
     window.scrollTo(0, 0);
   }
 
   function renderLeaders(){
-    $("leaders").innerHTML = state.leaders.map(function(n){ return '<option value="' + escAttr(n) + '">'; }).join("");
+    $("leaders").innerHTML = state.leaders.map(function(n){ return '<option value="' + esc(n) + '">'; }).join("");
   }
   function rememberLeader(){
     var n = clean(state.leader);
@@ -322,11 +693,483 @@
     renderLeaders(); save();
   }
 
+  // ---------- reminders ----------
+  function scheduleFor(dow){
+    var h = cfg().hours[dow];
+    if (!h.on) return null;
+    var o = minutes(h.open), c = minutes(h.close), r = cfg().reminders;
+    var clamp = function(x){ return Math.max(0, Math.min(1439, x)); };
+    return { open:o, close:c, pledge:clamp(o + r.pledgeAfter), eod:clamp(c - r.eodBefore) };
+  }
+  // Which message is due right now and not yet sent
+  function dueNow(){
+    var s = scheduleFor(new Date().getDay()); if (!s) return null;
+    var n = nowMins();
+    if (!state.sent.eod && n >= s.eod) return "eod";
+    if (!state.sent.pledge && n >= s.pledge && n < s.eod) return "pledge";
+    return null;
+  }
+
+  var bannerKey = null;
+  function renderBanner(){
+    var slot = $("banner-slot");
+    var key = dueNow();
+    if (key && state.dismissed[key]) key = null;
+    if (key !== bannerKey) {
+      var old = slot.querySelector(".bwrap:not(.out)");
+      if (old) {
+        old.classList.remove("in"); old.classList.add("out");
+        setTimeout(function(){ if (old.parentNode) old.parentNode.removeChild(old); }, REDUCED ? 0 : 520);
+      }
+      bannerKey = key;
+      if (key) {
+        var s = scheduleFor(new Date().getDay());
+        var title = key === "eod" ? "Time to send the EOD" : "Time to send the pledge";
+        var sub = key === "eod"
+          ? storeName() + (nowMins() < s.close ? " closes at " : " closed at ") + fmt(s.close)
+          : storeName() + " opened at " + fmt(s.open);
+        var w = document.createElement("div");
+        w.className = "bwrap";
+        w.innerHTML = '<div class="bin"><div class="banner" role="status">' +
+          '<div class="bicon">' + (key === "eod" ? "🌙" : "☀️") + '</div>' +
+          '<div class="txt"><b>' + title + '</b>' + esc(sub) + '</div>' +
+          '<button class="go" type="button">Open</button>' +
+          '<button class="x" type="button" aria-label="Dismiss for today">×</button>' +
+          '</div></div>';
+        w.querySelector(".go").addEventListener("click", function(){ setTab(key, true); });
+        w.querySelector(".x").addEventListener("click", function(){ state.dismissed[key] = true; save(); renderBanner(); });
+        slot.appendChild(w);
+        void w.offsetWidth;
+        w.classList.add("in");
+      }
+    }
+    var cur = slot.querySelector(".bwrap:not(.out) .go");
+    if (cur) cur.hidden = state.tab === bannerKey;
+  }
+
+  function markSent(){
+    state.sent[state.tab] = true; save();
+    renderBanner(); updateNextReminder();
+  }
+
+  function notify(key, test){
+    if (!("Notification" in window) || Notification.permission !== "granted") return false;
+    var s = scheduleFor(new Date().getDay());
+    var title = key === "eod" ? "🌙 Time to send the EOD" : "☀️ Time to send the pledge";
+    var body = test ? "Reminders are working." :
+      key === "eod" ? storeName() + " closes at " + fmt(s ? s.close : 0) + ". Send today's results."
+                    : storeName() + " is open. Send today's pledges.";
+    var opts = { body:body, icon:"icon-192.png", badge:"favicon.png", tag:"pledge-eod-" + key, data:{ tab:key } };
+    var fallback = function(){ try { new Notification(title, opts); } catch(e) {} };
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+      navigator.serviceWorker.getRegistration().then(function(reg){
+        if (reg && reg.showNotification) reg.showNotification(title, opts); else fallback();
+      }, fallback);
+    } else fallback();
+    return true;
+  }
+
+  function checkReminders(){
+    var key = dueNow();
+    if (key && !state.notified[key]) {
+      state.notified[key] = true; save();
+      // When the app is on screen the banner is enough
+      if (document.hidden && cfg().reminders.notify && !state.dismissed[key]) notify(key);
+    }
+    renderBanner();
+  }
+
+  function nextReminder(){
+    var now = new Date(), n = nowMins();
+    for (var off = 0; off < 8; off++) {
+      var dow = (now.getDay() + off) % 7, s = scheduleFor(dow);
+      if (!s) continue;
+      var kinds = ["pledge","eod"];
+      for (var i = 0; i < kinds.length; i++) {
+        var k = kinds[i];
+        if (off === 0 && (s[k] <= n || state.sent[k])) continue;
+        var when = off === 0 ? "today" : off === 1 ? "tomorrow" : DAY_NAMES[dow];
+        return "Next reminder: " + (k === "eod" ? "EOD" : "Pledge") + " " + when + " at " + fmt(s[k]) + ".";
+      }
+    }
+    return "No reminders set. Every day is switched off.";
+  }
+  function updateNextReminder(){ var el = $("set-next"); if (el) el.textContent = nextReminder(); }
+
+  // Weekly calendar events with an alert, one per open day per message
+  function buildICS(){
+    var BY = ["SU","MO","TU","WE","TH","FR","SA"];
+    var pad = function(x){ return ("0" + x).slice(-2); };
+    var stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+    var icsEsc = function(t){ return String(t).replace(/\\/g,"\\\\").replace(/([,;])/g,"\\$1").replace(/\n/g,"\\n"); };
+    var L = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//PledgeTracker//Reminders//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:Pledge & EOD"];
+    for (var dow = 0; dow < 7; dow++) {
+      var s = scheduleFor(dow); if (!s) continue;
+      var d = new Date(); d.setHours(0, 0, 0, 0);
+      while (d.getDay() !== dow) d.setDate(d.getDate() + 1);
+      var date = d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate());
+      ["pledge","eod"].forEach(function(k){
+        var t = s[k], end = Math.min(t + 10, 1439);
+        var title = k === "eod" ? "🌙 Send " + storeName() + " EOD" : "☀️ Send " + storeName() + " pledge";
+        L.push("BEGIN:VEVENT",
+          "UID:pledge-eod-" + k + "-" + BY[dow] + "@pledgetracker",
+          "DTSTAMP:" + stamp,
+          "DTSTART:" + date + "T" + pad(Math.floor(t / 60)) + pad(t % 60) + "00",
+          "DTEND:" + date + "T" + pad(Math.floor(end / 60)) + pad(end % 60) + "00",
+          "RRULE:FREQ=WEEKLY;BYDAY=" + BY[dow],
+          "SUMMARY:" + icsEsc(title),
+          "DESCRIPTION:" + icsEsc("Open Pledge & EOD and send today's " + (k === "eod" ? "results." : "pledges.")),
+          "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:" + icsEsc(title),"TRIGGER:PT0S","END:VALARM",
+          "END:VEVENT");
+      });
+    }
+    L.push("END:VCALENDAR");
+    return L.join("\r\n") + "\r\n";
+  }
+  function downloadICS(){
+    var ics = buildICS();
+    var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (isIOS) { window.location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics); return; }
+    var url = URL.createObjectURL(new Blob([ics], { type:"text/calendar;charset=utf-8" }));
+    var a = document.createElement("a");
+    a.href = url; a.download = "pledge-eod-reminders.ics";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+    toast("Calendar file saved. Open it to add the reminders");
+  }
+
+  // ---------- theme ----------
+  var themeTimer;
+  function applyTheme(animate){
+    var t = cfg().theme, root = document.documentElement;
+    if (animate && !REDUCED) {
+      root.classList.add("theming");
+      clearTimeout(themeTimer);
+      themeTimer = setTimeout(function(){ root.classList.remove("theming"); }, 500);
+    }
+    if (t === "light" || t === "dark") root.setAttribute("data-theme", t);
+    else root.removeAttribute("data-theme");
+    var seg = $("theme-seg"), i = ["system","light","dark"].indexOf(t);
+    seg.style.setProperty("--i", i);
+    seg.querySelectorAll("button").forEach(function(b){ b.setAttribute("aria-selected", b.getAttribute("data-v") === t ? "true" : "false"); });
+  }
+
+  // ---------- settings: render ----------
+  var CHEV = '<svg class="chev" width="8" height="13" viewBox="0 0 8 13"><path d="M1.5 1.5l5 5-5 5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var UP = '<svg viewBox="0 0 14 14"><path d="M3 9l4-4 4 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var DOWN = '<svg viewBox="0 0 14 14"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var openItems = {};
+
+  // 15-minute steps, shown as 24-hour times ("9:00") whatever the phone's region
+  function timeSelect(k, value, label, on){
+    var opts = "", found = false;
+    for (var m = 5 * 60; m <= 23 * 60 + 45; m += 15) {
+      var v = ("0" + Math.floor(m / 60)).slice(-2) + ":" + ("0" + (m % 60)).slice(-2);
+      if (v === value) found = true;
+      opts += '<option value="' + v + '"' + (v === value ? ' selected' : '') + '>' + fmt(m) + '</option>';
+    }
+    if (!found) opts = '<option value="' + value + '" selected>' + fmt(minutes(value)) + '</option>' + opts;
+    return '<select class="time" data-k="' + k + '" aria-label="' + label + '"' + (on ? '' : ' disabled') + '>' + opts + '</select>';
+  }
+
+  function renderHours(){
+    $("set-hours").innerHTML = WEEK_ORDER.map(function(dow){
+      var h = cfg().hours[dow];
+      return '<div class="hrow' + (h.on ? '' : ' closed') + '" data-dow="' + dow + '">' +
+        '<span class="d">' + DAY_NAMES[dow].slice(0, 3) + '</span>' +
+        timeSelect("open", h.open, DAY_NAMES[dow] + " opening time", h.on) +
+        '<span class="dash">–</span>' +
+        timeSelect("close", h.close, DAY_NAMES[dow] + " closing time", h.on) +
+        '<label class="switch sm"><input type="checkbox" data-k="on"' + (h.on ? ' checked' : '') + ' aria-label="Open on ' + DAY_NAMES[dow] + '"><span></span></label>' +
+        '</div>';
+    }).join("");
+  }
+
+  function metricMeta(m){
+    return clean(m.defT) ? "target " + m.defT + (m.suf || "") : "";
+  }
+  function pledgeMeta(p){
+    var m = p.eod && metricById(p.eod);
+    return m ? "→ " + m.label : "";
+  }
+
+  function itemHTML(kind, x, i, n){
+    var meta = kind === "metric" ? metricMeta(x) : pledgeMeta(x);
+    var fields;
+    if (kind === "metric") {
+      fields =
+        '<label><span>Emoji</span><input data-f="emoji" value="' + esc(x.emoji) + '"></label>' +
+        '<label class="w2"><span>Name</span><input data-f="label" value="' + esc(x.label) + '" placeholder="e.g. Accessories"></label>' +
+        '<label><span>Before value</span><input data-f="pre" value="' + esc(x.pre) + '" placeholder="e.g. £"></label>' +
+        '<label><span>After target</span><input data-f="suf" value="' + esc(x.suf) + '" placeholder="e.g. %"></label>' +
+        '<label><span>Default target</span><input data-f="defT" value="' + esc(x.defT) + '" inputmode="decimal" placeholder="none"></label>';
+    } else {
+      fields =
+        '<label><span>Emoji</span><input data-f="emoji" value="' + esc(x.emoji) + '"></label>' +
+        '<label class="w2"><span>Name</span><input data-f="label" value="' + esc(x.label) + '" placeholder="e.g. Accessories"></label>' +
+        '<label class="w3"><span>Fills this EOD target</span><select data-f="eod"><option value="">None</option>' +
+        cfg().metrics.map(function(m){ return '<option value="' + m.id + '"' + (m.id === x.eod ? ' selected' : '') + '>' + esc(m.emoji + " " + m.label) + '</option>'; }).join("") +
+        '</select></label>';
+    }
+    return '<div class="item' + (x.on ? '' : ' off') + (openItems[x.id] ? ' open' : '') + '" data-id="' + x.id + '">' +
+      '<div class="ihead">' +
+        '<label class="switch sm"><input type="checkbox" class="on"' + (x.on ? ' checked' : '') + ' aria-label="Show ' + esc(x.label) + '"><span></span></label>' +
+        '<button class="itoggle" type="button" aria-expanded="' + (openItems[x.id] ? 'true' : 'false') + '">' +
+          '<span class="emo">' + esc(x.emoji) + '</span><span class="lbl">' + esc(x.label || "Untitled") + '</span>' +
+          '<span class="meta">' + esc(meta) + '</span>' + CHEV +
+        '</button>' +
+        '<button class="mini up" type="button" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>' + UP + '</button>' +
+        '<button class="mini down" type="button" aria-label="Move down"' + (i === n - 1 ? ' disabled' : '') + '>' + DOWN + '</button>' +
+      '</div>' +
+      '<div class="editor"><div class="ed-in"><div class="ed-pad">' +
+        '<div class="ed-grid">' + fields + '</div>' +
+        '<button class="del" type="button">Delete line</button>' +
+      '</div></div></div>' +
+    '</div>';
+  }
+  function renderList(kind){
+    var list = kind === "metric" ? cfg().metrics : cfg().pledges;
+    var el = $(kind === "metric" ? "set-metrics" : "set-pledges");
+    el.innerHTML = list.length ? list.map(function(x, i){ return itemHTML(kind, x, i, list.length); }).join("")
+      : '<div class="row" style="color:var(--muted)">No lines yet</div>';
+  }
+
+  function renderTemplates(){
+    $("tpl-pledge").value = cfg().templates.pledge;
+    $("tpl-eod").value = cfg().templates.eod;
+    document.querySelectorAll(".chips").forEach(function(c){
+      c.innerHTML = TAGS[c.getAttribute("data-for")].map(function(t){ return '<button class="chip" type="button">' + t + '</button>'; }).join("");
+    });
+  }
+
+  function renderSettings(){
+    applyTheme(false);
+    $("set-store").value = state.store;
+    renderHours();
+    $("set-notify").checked = cfg().reminders.notify && "Notification" in window && Notification.permission === "granted";
+    $("set-pledge-after").value = String(cfg().reminders.pledgeAfter);
+    $("set-eod-before").value = String(cfg().reminders.eodBefore);
+    updateNextReminder();
+    renderTemplates();
+    renderList("pledge");
+    renderList("metric");
+  }
+
+  // ---------- settings: events ----------
+  $("theme-seg").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if (!b) return;
+    cfg().theme = b.getAttribute("data-v"); save(); applyTheme(true);
+  });
+  $("set-store").addEventListener("input", function(e){ state.store = e.target.value; update(); });
+
+  $("set-hours").addEventListener("change", function(e){
+    var row = e.target.closest(".hrow"); if (!row) return;
+    var h = cfg().hours[+row.getAttribute("data-dow")], k = e.target.getAttribute("data-k");
+    if (k === "on") {
+      h.on = e.target.checked;
+      row.classList.toggle("closed", !h.on);
+      row.querySelectorAll("select.time").forEach(function(t){ t.disabled = !h.on; });
+    } else if (validTime(e.target.value)) h[k] = e.target.value;
+    save(); update(); bannerKey = "refresh"; checkReminders(); updateNextReminder();
+  });
+
+  $("set-notify").addEventListener("change", function(e){
+    var box = e.target;
+    if (!box.checked) { cfg().reminders.notify = false; save(); return; }
+    if (!("Notification" in window)) {
+      box.checked = false;
+      toast("Notifications aren't available here. Use Calendar");
+      return;
+    }
+    Notification.requestPermission().then(function(p){
+      if (p === "granted") { cfg().reminders.notify = true; save(); toast("Notifications on"); }
+      else { box.checked = false; cfg().reminders.notify = false; save(); toast("Notifications are blocked in browser settings"); }
+    });
+  });
+  $("set-pledge-after").addEventListener("change", function(e){ cfg().reminders.pledgeAfter = +e.target.value; save(); checkReminders(); updateNextReminder(); });
+  $("set-eod-before").addEventListener("change", function(e){ cfg().reminders.eodBefore = +e.target.value; save(); checkReminders(); updateNextReminder(); });
+  $("set-ics").addEventListener("click", downloadICS);
+  $("set-test").addEventListener("click", function(){
+    if (!("Notification" in window)) { toast("Notifications aren't available here. Use Calendar"); return; }
+    var go = function(){ if (!notify(state.tab, true)) toast("Notifications are blocked in browser settings"); };
+    if (Notification.permission === "default") Notification.requestPermission().then(go); else go();
+  });
+
+  // templates
+  ["pledge","eod"].forEach(function(k){
+    $("tpl-" + k).addEventListener("input", function(e){ cfg().templates[k] = e.target.value; update(); });
+  });
+  document.querySelectorAll("[data-reset]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var k = b.getAttribute("data-reset");
+      cfg().templates[k] = DEFAULT_TEMPLATES[k];
+      $("tpl-" + k).value = DEFAULT_TEMPLATES[k];
+      update(); toast("Template reset");
+    });
+  });
+  document.querySelectorAll(".chips").forEach(function(c){
+    c.addEventListener("click", function(e){
+      var chip = e.target.closest(".chip"); if (!chip) return;
+      var ta = $(c.getAttribute("data-for")), tag = chip.textContent;
+      var s = ta.selectionStart != null ? ta.selectionStart : ta.value.length, en = ta.selectionEnd != null ? ta.selectionEnd : s;
+      ta.value = ta.value.slice(0, s) + tag + ta.value.slice(en);
+      ta.focus(); ta.setSelectionRange(s + tag.length, s + tag.length);
+      ta.dispatchEvent(new Event("input"));
+    });
+  });
+
+  // editable lists (pledges + metrics share one handler)
+  function bindList(kind){
+    var el = $(kind === "metric" ? "set-metrics" : "set-pledges");
+    var list = function(){ return kind === "metric" ? cfg().metrics : cfg().pledges; };
+    var find = function(node){
+      var item = node.closest(".item"); if (!item) return null;
+      var id = item.getAttribute("data-id"), arr = list();
+      for (var i = 0; i < arr.length; i++) if (arr[i].id === id) return { item:item, x:arr[i], i:i };
+      return null;
+    };
+
+    el.addEventListener("click", function(e){
+      var f = find(e.target); if (!f) return;
+      if (e.target.closest(".itoggle")) {
+        var open = !f.item.classList.contains("open");
+        f.item.classList.toggle("open", open);
+        f.item.querySelector(".itoggle").setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) openItems[f.x.id] = true; else delete openItems[f.x.id];
+      } else if (e.target.closest(".up") || e.target.closest(".down")) {
+        var dir = e.target.closest(".up") ? -1 : 1, arr = list(), j = f.i + dir;
+        if (j < 0 || j >= arr.length) return;
+        flip(el, function(){ arr.splice(j, 0, arr.splice(f.i, 1)[0]); renderList(kind); });
+        save(); rebuildMain();
+      } else if (e.target.closest(".del")) {
+        if (!confirm('Delete "' + (f.x.label || "this line") + '"?')) return;
+        flip(el, function(){ list().splice(f.i, 1); renderList(kind); });
+        if (kind === "metric") { cfg().pledges.forEach(function(p){ if (p.eod === f.x.id) p.eod = ""; }); renderList("pledge"); }
+        delete openItems[f.x.id];
+        save(); rebuildMain();
+      }
+    });
+    el.addEventListener("change", function(e){
+      var f = find(e.target); if (!f) return;
+      if (e.target.classList.contains("on")) {
+        f.x.on = e.target.checked;
+        f.item.classList.toggle("off", !f.x.on);
+        save(); rebuildMain();
+      } else if (e.target.getAttribute("data-f") === "eod") {
+        f.x.eod = e.target.value;
+        // carry today's pledge across to the newly linked target
+        if (f.x.eod && clean(state.pledge[f.x.id]) && state.eod[f.x.eod]) state.eod[f.x.eod].t = state.pledge[f.x.id];
+        f.item.querySelector(".meta").textContent = pledgeMeta(f.x);
+        save(); rebuildMain();
+      }
+    });
+    el.addEventListener("input", function(e){
+      var key = e.target.getAttribute("data-f"); if (!key || key === "eod") return;
+      var f = find(e.target); if (!f) return;
+      var prevDef = f.x.defT;
+      f.x[key] = e.target.value;
+      // a new default target also updates today's target if it was still on the old default
+      if (key === "defT" && state.eod[f.x.id] && (state.eod[f.x.id].t === prevDef || state.eod[f.x.id].t === "")) state.eod[f.x.id].t = e.target.value;
+      f.item.querySelector(".emo").textContent = f.x.emoji;
+      f.item.querySelector(".lbl").textContent = f.x.label || "Untitled";
+      f.item.querySelector(".meta").textContent = kind === "metric" ? metricMeta(f.x) : pledgeMeta(f.x);
+      save(); rebuildMain();
+      if (kind === "metric" && (key === "label" || key === "emoji")) {
+        document.querySelectorAll('#set-pledges option[value="' + f.x.id + '"]').forEach(function(o){ o.textContent = f.x.emoji + " " + f.x.label; });
+        document.querySelectorAll("#set-pledges .item").forEach(function(it){
+          var p = cfg().pledges.filter(function(q){ return q.id === it.getAttribute("data-id"); })[0];
+          if (p) it.querySelector(".meta").textContent = pledgeMeta(p);
+        });
+      }
+    });
+  }
+  bindList("metric");
+  bindList("pledge");
+
+  function addLine(kind){
+    var el = $(kind === "metric" ? "set-metrics" : "set-pledges");
+    var x = kind === "metric"
+      ? { id:uid("m"), emoji:"⭐", label:"", pre:"", suf:"", defT:"", on:true }
+      : { id:uid("p"), emoji:"⭐", label:"", eod:"", on:true };
+    openItems[x.id] = true;
+    flip(el, function(){ (kind === "metric" ? cfg().metrics : cfg().pledges).push(x); renderList(kind); });
+    ensureEntries(state); save(); rebuildMain();
+    if (kind === "metric") renderList("pledge");
+    var input = el.querySelector('[data-id="' + x.id + '"] [data-f="label"]');
+    if (input) setTimeout(function(){ input.focus(); }, REDUCED ? 0 : 250);
+  }
+  $("add-metric").addEventListener("click", function(){ addLine("metric"); });
+  $("add-pledge").addEventListener("click", function(){ addLine("pledge"); });
+
+  $("set-restore").addEventListener("click", function(){
+    if (!confirm("Restore default lines, templates, hours, reminders and theme? Today's numbers are kept.")) return;
+    state.config = defaultConfig();
+    openItems = {};
+    ensureEntries(state); save();
+    applyTheme(true); renderSettings(); rebuildMain(); bannerKey = "refresh"; checkReminders();
+    toast("Defaults restored");
+  });
+
+  // ---------- settings sheet open / close / swipe down ----------
+  var overlay = $("settings"), sheet = $("sheet"), backdrop = $("backdrop");
+  var lastFocus = null;
+  function openSettings(){
+    lastFocus = document.activeElement;
+    renderSettings();
+    $("sheet-body").scrollTop = 0;
+    overlay.removeAttribute("inert");
+    overlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("locked");
+    requestAnimationFrame(function(){ overlay.classList.add("open"); });
+  }
+  function closeSettings(){
+    if (!overlay.classList.contains("open")) return;
+    if (document.activeElement && overlay.contains(document.activeElement)) document.activeElement.blur();
+    sheet.style.transform = ""; sheet.style.transition = "";
+    backdrop.style.opacity = ""; backdrop.style.transition = "";
+    overlay.classList.remove("open");
+    overlay.setAttribute("inert", "");
+    overlay.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("locked");
+    if (lastFocus && lastFocus.focus) try { lastFocus.focus({ preventScroll:true }); } catch(e) {}
+  }
+  $("open-settings").addEventListener("click", openSettings);
+  $("set-done").addEventListener("click", closeSettings);
+  backdrop.addEventListener("click", closeSettings);
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeSettings(); });
+
+  (function(){
+    var head = $("sheet-head"), startY = 0, startT = 0, dy = 0, dragging = false;
+    head.addEventListener("pointerdown", function(e){
+      if (e.target.closest("button")) return;
+      dragging = true; startY = e.clientY; startT = Date.now(); dy = 0;
+      sheet.style.transition = "none"; backdrop.style.transition = "none";
+      try { head.setPointerCapture(e.pointerId); } catch(_) {}
+    });
+    head.addEventListener("pointermove", function(e){
+      if (!dragging) return;
+      var raw = e.clientY - startY;
+      dy = raw > 0 ? raw : raw / 6; // rubber-band when pulled up
+      sheet.style.transform = "translateY(" + dy + "px)";
+      backdrop.style.opacity = String(Math.max(0, 1 - Math.max(0, dy) / sheet.offsetHeight));
+    });
+    function end(){
+      if (!dragging) return;
+      dragging = false;
+      var v = dy / Math.max(1, Date.now() - startT);
+      sheet.style.transition = ""; backdrop.style.transition = "";
+      if (dy > 140 || (dy > 30 && v > 0.6)) closeSettings();
+      else { sheet.style.transform = ""; backdrop.style.opacity = ""; }
+    }
+    head.addEventListener("pointerup", end);
+    head.addEventListener("pointercancel", end);
+  })();
+
   // ---------- actions ----------
   var toastTimer;
   function toast(msg){
     var t = $("toast"); t.textContent = msg; t.classList.add("show");
-    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 1800);
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2000);
   }
 
   function copyText(text){
@@ -347,11 +1190,15 @@
 
   $("copy").addEventListener("click", function(){
     rememberLeader();
-    copyText(currentMessage()).then(function(ok){ toast(ok ? "Copied – paste into WhatsApp" : "Couldn't copy – long-press the preview"); });
+    copyText(currentMessage()).then(function(ok){
+      if (ok) markSent();
+      toast(ok ? "Copied. Paste it into WhatsApp" : "Couldn't copy. Long-press the preview to copy it");
+    });
   });
 
   $("whatsapp").addEventListener("click", function(){
     rememberLeader();
+    markSent();
     // wa.me / api.whatsapp.com redirects corrupt emojis, so go straight to the app on phones
     var text = encodeURIComponent(currentMessage());
     var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
@@ -365,51 +1212,58 @@
     if (state.tab === "pledge") {
       if (!confirm("Clear today's leader and pledges?")) return;
       state.leader = ""; $("leader").value = "";
-      PLEDGES.forEach(function(p){
-        state.pledge[p.k] = "";
-        if (p.eod) state.eod[p.eod].t = "";
+      cfg().pledges.forEach(function(p){
+        state.pledge[p.id] = "";
+        if (p.eod && state.eod[p.eod]) state.eod[p.eod].t = "";
       });
-      buildPledgeFields(); buildEodFields();
     } else {
       if (!confirm("Clear today's actuals? Targets are kept.")) return;
-      METRICS.forEach(function(m){ state.eod[m.k].a = ""; state.eod[m.k].o = "auto"; });
-      buildEodFields();
+      Object.keys(state.eod).forEach(function(k){ state.eod[k].a = ""; state.eod[k].o = "auto"; });
     }
-    update(); toast("Cleared");
+    rebuildMain(); toast("Cleared");
   });
 
-  document.querySelectorAll(".tab").forEach(function(b){
-    b.addEventListener("click", function(){ setTab(b.getAttribute("data-tab")); });
+  document.querySelectorAll("#tabs button").forEach(function(b){
+    b.addEventListener("click", function(){ setTab(b.getAttribute("data-tab"), true); });
   });
 
-  $("store").value = state.store;
-  $("store").addEventListener("input", function(e){ state.store = e.target.value; update(); });
   $("leader").value = state.leader;
   $("leader").addEventListener("input", function(e){ state.leader = e.target.value; update(); });
   $("leader").addEventListener("change", rememberLeader);
 
-  // ---------- daily reset ----------
+  // ---------- daily reset + reminder clock ----------
   // The app may stay open overnight (PWA / background tab), so check again whenever it's shown.
   function checkNewDay(){
     if (state.day === todayKey()) return;
     resetDay(state);
     $("leader").value = "";
-    buildPledgeFields(); buildEodFields();
-    setTab("pledge");
-    update();
-    toast("New day – pledges and actuals reset");
+    rebuildMain();
+    setTab("pledge", true);
+    toast("New day. Pledges and actuals reset");
   }
-  document.addEventListener("visibilitychange", function(){ if (!document.hidden) checkNewDay(); });
-  window.addEventListener("focus", checkNewDay);
-  window.addEventListener("pageshow", checkNewDay);
-  setInterval(checkNewDay, 60 * 1000);
+  function tick(){ checkNewDay(); checkReminders(); $("head-sub").textContent = headSub(); }
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) tick(); });
+  window.addEventListener("focus", tick);
+  window.addEventListener("pageshow", tick);
+  setInterval(tick, 30 * 1000);
+
+  // Opened from a notification
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener("message", function(e){
+      if (e.data && (e.data.tab === "pledge" || e.data.tab === "eod")) setTab(e.data.tab, true);
+    });
+  }
+  var qTab = null;
+  try { qTab = new URLSearchParams(location.search).get("tab"); } catch(e) {}
 
   // ---------- init ----------
+  applyTheme(false);
   renderLeaders();
   buildPledgeFields();
   buildEodFields();
-  setTab(state.tab === "eod" ? "eod" : "pledge");
+  setTab(qTab === "eod" || qTab === "pledge" ? qTab : (state.tab === "eod" ? "eod" : "pledge"), false);
   update();
+  checkReminders();
 })();
 
 // Register the offline cache (only works over https, e.g. GitHub Pages)

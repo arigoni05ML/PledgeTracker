@@ -1,5 +1,5 @@
 // Offline cache for Pledge & EOD. Bump VERSION whenever you update any file.
-const VERSION = "v3";
+const VERSION = "v4";
 const CACHE = "pledge-eod-" + VERSION;
 const FILES = [
   "./",
@@ -39,5 +39,19 @@ self.addEventListener("fetch", (e) => {
         return res;
       })
       .catch(() => caches.match(e.request).then((r) => r || caches.match("index.html")))
+  );
+});
+
+// Tapping a reminder opens (or focuses) the app on the right tab
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const tab = (e.notification.data && e.notification.data.tab) || "pledge";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ("focus" in c) { c.postMessage({ tab }); return c.focus(); }
+      }
+      return self.clients.openWindow("./?tab=" + tab);
+    })
   );
 });
