@@ -1,5 +1,5 @@
 // Offline cache for Pledge & EOD. Bump VERSION whenever you update any file.
-const VERSION = "v4";
+const VERSION = "v5";
 const CACHE = "pledge-eod-" + VERSION;
 const FILES = [
   "./",
