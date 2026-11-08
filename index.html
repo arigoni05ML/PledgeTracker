@@ -582,7 +582,7 @@
     v.results = list.map(function(m){
       var d = state.eod[m.id], a = clean(d.a) || "0", t = clean(d.t), ok = isTicked(m);
       if (ok) hit++;
-      return m.emoji + " *" + m.label + ":* " + (m.pre || "") + a + (t !== "" ? "/" + t + (m.suf || "") : "") + (ok ? "✅" : "❌");
+      return m.emoji + " *" + m.label + ":* " + (m.pre || "") + a + (m.suf || "") + (t !== "" ? "/" + t + (m.suf || "") : "") + (ok ? "✅" : "❌");
     }).join("\n");
     v.score = hit + "/" + list.length;
     return fill(cfg().templates.eod, v);
@@ -623,7 +623,7 @@
       var d = state.eod[m.id];
       return '<div class="metric">' +
         '<div class="name">' + esc(m.emoji + " " + m.label) + '</div>' +
-        '<div><label class="field" for="a-' + m.id + '">Actual</label>' + affixInput("a-" + m.id, d.a, m.pre, "", "0") + '</div>' +
+        '<div><label class="field" for="a-' + m.id + '">Actual</label>' + affixInput("a-" + m.id, d.a, m.pre, m.suf, "0") + '</div>' +
         '<div class="slash">/</div>' +
         '<div><label class="field" for="t-' + m.id + '">Target</label>' + affixInput("t-" + m.id, d.t, "", m.suf, "none") + '</div>' +
         '<button class="tick" id="k-' + m.id + '" type="button" aria-label="Toggle tick for ' + esc(m.label) + '"></button>' +
@@ -901,7 +901,7 @@
         '<label><span>Emoji</span><input data-f="emoji" value="' + esc(x.emoji) + '"></label>' +
         '<label class="w2"><span>Name</span><input data-f="label" value="' + esc(x.label) + '" placeholder="e.g. Accessories"></label>' +
         '<label><span>Before value</span><input data-f="pre" value="' + esc(x.pre) + '" placeholder="e.g. £"></label>' +
-        '<label><span>After target</span><input data-f="suf" value="' + esc(x.suf) + '" placeholder="e.g. %"></label>' +
+        '<label><span>After numbers</span><input data-f="suf" value="' + esc(x.suf) + '" placeholder="e.g. %"></label>' +
         '<label><span>Default target</span><input data-f="defT" value="' + esc(x.defT) + '" inputmode="decimal" placeholder="none"></label>';
     } else {
       fields =
